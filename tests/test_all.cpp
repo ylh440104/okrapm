@@ -25,6 +25,15 @@ void test_version() {
     auto v2 = Version::parse("14.1.0");
     assert(v2.has_value());
     assert(*v1 > *v2);
+
+    // A component with a suffix on it is refused rather than truncated. The
+    // integer parser would otherwise take "2025a" as 2025 and drop the letter,
+    // which turns 2025a, 2025b and 2025c into the same version - and tzdata
+    // ships all three within one year, so the upgrade would never be offered.
+    assert(!Version::parse("2025a").has_value());
+    assert(!Version::parse("2025b").has_value());
+    assert(Version::parse("2025.1").has_value());
+
     std::cout << "[PASS] test_version\n";
 }
 

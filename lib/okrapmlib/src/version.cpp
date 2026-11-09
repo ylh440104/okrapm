@@ -27,8 +27,19 @@ std::optional<Version> Version::parse(const std::string& str) {
     while (std::getline(iss, token, '.')) {
         if (component > 2) return std::nullopt;
         try {
-            int val = std::stoi(token);
+            // std::stoi stops at the first character it cannot use, so a token
+            // such as "2025a" would be read as 2025 and the "a" dropped without
+            // a word. That is not a rounding detail: tzdata ships 2025a, 2025b
+            // and 2025c within one year, and any two of them would turn into
+            // the same version, so the resolver would see the installed release
+            // and the one being offered as equal and never upgrade. Anything
+            // the integer does not account for is refused here, where it is a
+            // visible error, rather than at the artifact name, where it is a
+            // silent collision.
+            std::size_t consumed = 0;
+            int val = std::stoi(token, &consumed);
             if (val < 0) return std::nullopt;
+            if (consumed != token.size()) return std::nullopt;
             switch (component) {
                 case 0: v.major_ = val; break;
                 case 1: v.minor_ = val; break;
